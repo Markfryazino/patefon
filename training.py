@@ -141,17 +141,17 @@ def train(D_train, y_train, D_test, y_test, params=None):
     except KeyboardInterrupt:
         print("TRAINING STOPPED!")
 
-        if config["run_evaluation"]:
-            print("TRAINING FINISHED. EVALUATING.")
+    if config["run_evaluation"]:
+        print("TRAINING FINISHED. EVALUATING.")
 
-            train_loss, train_acc = eval_model(model, train_loader, criterion, config["device"])
-            eval_loss, eval_acc = eval_model(model, eval_loader, criterion, config["device"])
+        train_loss, train_acc = eval_model(model, train_loader, criterion, config["device"])
+        eval_loss, eval_acc = eval_model(model, eval_loader, criterion, config["device"])
 
-            metrics = {"final_train_loss": train_loss, "final_eval_loss": eval_loss,
-                       "final_train_accuracy": train_acc, "final_eval_accuracy": eval_acc}
+        metrics = {"final_train_loss": train_loss, "final_eval_loss": eval_loss,
+                    "final_train_accuracy": train_acc, "final_eval_accuracy": eval_acc}
 
-            wandb.log(metrics)
-            pprint(metrics)
-            
-        wandb.finish()
-        return model
+        wandb.log(metrics)
+        pprint(metrics)
+        
+    wandb.finish()
+    return model

@@ -24,6 +24,7 @@ class EncoderBlock(torch.nn.Module):
         self.feedforward = torch.nn.Sequential(
             torch.nn.Linear(embed_dim, ff_dim),
             torch.nn.GELU(),
+            torch.nn.Dropout(dropout_prob),
             torch.nn.Linear(ff_dim, embed_dim)
         )
 
