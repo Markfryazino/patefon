@@ -6,6 +6,7 @@ from pprint import pprint
 import random
 
 from model import Patefon
+from data import OrbitDataset, collate_orbits
 
 
 DEFAULT_PARAMS = {
@@ -19,6 +20,9 @@ DEFAULT_PARAMS = {
     "max_grad_norm": 10.,
     "patefon": {},
     "random_state": 42,
+    "H0_size": 128,
+    "H1_size": 128,
+    "batch_size": 128,
 }
 
 
@@ -57,7 +61,7 @@ def eval_model(model, dataloader, criterion, device="cuda:0"):
     return eval_loss / eval_num, eval_guesses / eval_num
 
 
-def train(train_loader, eval_loader, params=None):
+def train(D_train, y_train, D_test, y_test, params=None):
     config = DEFAULT_PARAMS.copy()
     unknown_params = set(params.keys()) - set(config.keys())
     if len(unknown_params) > 0:
@@ -65,6 +69,14 @@ def train(train_loader, eval_loader, params=None):
     config.update(params)
 
     set_random_seed(config["random_state"])
+
+    train_dataset = OrbitDataset(D_train, y_train, config["H0_size"], config["H1_size"])
+    test_dataset = OrbitDataset(D_test, y_test, config["H0_size"], config["H1_size"])
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config["batch_size"], 
+                                               shuffle=True, collate_fn=collate_orbits)
+    eval_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config["batch_size"], 
+                                              collate_fn=collate_orbits)
+    
     config["total_steps"] = config["epochs"] * len(train_loader)
 
     model = Patefon(**config["patefon"]).to(config["device"])
@@ -84,8 +96,6 @@ def train(train_loader, eval_loader, params=None):
     steps = 0
     train_loss = 0.
     train_num = 0
-
-    loader_len = len(train_loader)
 
     eval_loss, eval_acc = eval_model(model, eval_loader, criterion, config["device"])
     wandb.log({"eval_loss": eval_loss, "eval_accuracy": eval_acc}, step=steps)

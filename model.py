@@ -43,7 +43,7 @@ class EncoderBlock(torch.nn.Module):
 
 class ReZeroEncoder(torch.nn.Module):
     def __init__(self, embed_dim=128, ff_dim=128, attn_num_heads=8, dropout_prob=0.0):
-        super(EncoderBlock, self).__init__()
+        super(ReZeroEncoder, self).__init__()
         
         self.attention = torch.nn.MultiheadAttention(embed_dim=embed_dim, num_heads=attn_num_heads,
                                                      dropout=dropout_prob, batch_first=True)
