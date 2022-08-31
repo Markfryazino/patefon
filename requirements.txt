@@ -1,0 +1,7 @@
+Click
+numpy
+ripserplusplus
+scikit_learn
+torch==1.11.0
+tqdm
+wandb

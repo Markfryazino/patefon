@@ -1,6 +1,7 @@
+from email.policy import default
 import click
 
-from patefon import train_patefon, create_dataset_of_diagrams
+from patefon import train_patefon, create_dataset_of_diagrams, set_random_seed
 
 
 @click.command()
@@ -10,6 +11,7 @@ from patefon import train_patefon, create_dataset_of_diagrams
 @click.option("--decoder-dropout", default=0.0, help="Dropout rate in decoder blocks")
 @click.option("--batch-size", default=64, help="Batch size")
 @click.option("--epochs", default=500, help="Number of epochs to train")
+@click.option("--random-seed", default=42, help="Random seed used for training and data generation")
 @click.option("--wandb-project", default=None, help="wandb project name")
 @click.option("--wandb-entity", default=None, help="wandb entity name")
 @click.option("--wandb-run", default=None, help="wandb run name")
@@ -20,6 +22,7 @@ def run(
     decoder_dropout: float,
     batch_size: int,
     epochs: int,
+    random_seed: int,
     wandb_project: str,
     wandb_entity: str,
     wandb_run: str,
@@ -27,6 +30,7 @@ def run(
     updated_params = dict(
         batch_size=batch_size,
         epochs=epochs,
+        random_seed=random_seed,
         wandb=dict(
             project=wandb_project,
             entity=wandb_entity,
@@ -41,5 +45,11 @@ def run(
         ),
     )
 
+    set_random_seed(random_seed)
+
     D_train, D_test, y_train, y_test = create_dataset_of_diagrams(objects_per_class)
-    train_patefon(D_train, D_test, y_train, y_test, params=updated_params)
+    train_patefon(D_train, y_train, D_test, y_test, params=updated_params)
+
+
+if __name__ == "__main__":
+    run()
