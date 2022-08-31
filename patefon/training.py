@@ -5,8 +5,8 @@ import numpy as np
 from pprint import pprint
 import random
 
-from model import Patefon
-from data import OrbitDataset, collate_orbits
+from patefon.model import Patefon
+from patefon.data import OrbitDataset, collate_orbits
 
 
 DEFAULT_PARAMS = {
@@ -17,12 +17,13 @@ DEFAULT_PARAMS = {
     "run_evaluation": True,
     "log_steps": 20,
     "eval_steps": 1000,
-    "max_grad_norm": 10.,
+    "max_grad_norm": 10.0,
     "patefon": {},
     "random_state": 42,
     "H0_size": 128,
     "H1_size": 128,
     "batch_size": 128,
+    "wandb": {},
 }
 
 
@@ -43,7 +44,7 @@ def dict_to_device(d, device="cuda"):
 def eval_model(model, dataloader, criterion, device="cuda:0"):
     model.eval()
 
-    eval_loss = 0.
+    eval_loss = 0.0
     eval_guesses = 0
     eval_num = 0
     with torch.inference_mode():
@@ -61,7 +62,7 @@ def eval_model(model, dataloader, criterion, device="cuda:0"):
     return eval_loss / eval_num, eval_guesses / eval_num
 
 
-def train(D_train, y_train, D_test, y_test, params=None):
+def train_patefon(D_train, y_train, D_test, y_test, params=None):
     config = DEFAULT_PARAMS.copy()
     unknown_params = set(params.keys()) - set(config.keys())
     if len(unknown_params) > 0:
@@ -72,11 +73,11 @@ def train(D_train, y_train, D_test, y_test, params=None):
 
     train_dataset = OrbitDataset(D_train, y_train, config["H0_size"], config["H1_size"])
     test_dataset = OrbitDataset(D_test, y_test, config["H0_size"], config["H1_size"])
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config["batch_size"], 
-                                               shuffle=True, collate_fn=collate_orbits)
-    eval_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config["batch_size"], 
-                                              collate_fn=collate_orbits)
-    
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=config["batch_size"], shuffle=True, collate_fn=collate_orbits
+    )
+    eval_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config["batch_size"], collate_fn=collate_orbits)
+
     config["total_steps"] = config["epochs"] * len(train_loader)
 
     model = Patefon(**config["patefon"]).to(config["device"])
@@ -87,14 +88,13 @@ def train(D_train, y_train, D_test, y_test, params=None):
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, **config["scheduler"])
 
     wandb.init(
-        project="hodge_hw1",
-        entity="broccoliman",
+        **params["wandb"],
         config=config,
     )
     wandb.watch(model)
 
     steps = 0
-    train_loss = 0.
+    train_loss = 0.0
     train_num = 0
 
     eval_loss, eval_acc = eval_model(model, eval_loader, criterion, config["device"])
@@ -125,13 +125,12 @@ def train(D_train, y_train, D_test, y_test, params=None):
                     tbar.update(1)
                     steps += 1
 
-                    wandb.log({"adamw_learning_rate": optimizer.param_groups[0]['lr'], "epoch": epoch},
-                              step=steps)
+                    wandb.log({"adamw_learning_rate": optimizer.param_groups[0]["lr"], "epoch": epoch}, step=steps)
 
                     if steps % config["log_steps"] == 0:
                         wandb.log({"train_loss": train_loss / train_num}, step=steps)
 
-                        train_loss = 0.
+                        train_loss = 0.0
                         train_num = 0
 
                     if steps % config["eval_steps"] == 0:
@@ -147,11 +146,15 @@ def train(D_train, y_train, D_test, y_test, params=None):
         train_loss, train_acc = eval_model(model, train_loader, criterion, config["device"])
         eval_loss, eval_acc = eval_model(model, eval_loader, criterion, config["device"])
 
-        metrics = {"final_train_loss": train_loss, "final_eval_loss": eval_loss,
-                    "final_train_accuracy": train_acc, "final_eval_accuracy": eval_acc}
+        metrics = {
+            "final_train_loss": train_loss,
+            "final_eval_loss": eval_loss,
+            "final_train_accuracy": train_acc,
+            "final_eval_accuracy": eval_acc,
+        }
 
         wandb.log(metrics)
         pprint(metrics)
-        
+
     wandb.finish()
     return model
